@@ -1,31 +1,69 @@
-# React & Tailwind CSS Starter Pack
+# MediNearby
 
-This is a starter pack for creating React projects with Tailwind CSS configured. It uses React version **18.2** and Tailwind CSS version **3.2**.
+**MediNearby** is a React application to find doctors nearby. It uses **React 18**, **Tailwind CSS 3.2**, and integrates **maps**, **search**, and **filters** to help users locate doctors by specialty and location.
 
-## Usage
+## Features
 
-This starter pack includes a basic setup for using **Tailwind CSS with React**. To start building your own components and styles, follow these steps:
+- Search for doctors by **name**, **specialty**, or **clinic**.
+- Filter doctors by **specialty**.
+- View doctors on an interactive **map** with user location.
+- Click on a doctor card to highlight them on the map.
+- Automatically detects your **current location** (with a fallback default location).
 
-1. Clone the repository to your local machine.
+## Installation
+
+1. Clone the repository to your local machine:
     ```sh
-    git clone https://github.com/thepranaygupta/react-tailwind-css-starter-pack.git
+    git clone https://github.com/princepal09/MediNearby.git
     ```
 
-1. Install the required packages.
+2. Navigate to the project directory:
     ```sh
-    cd react-tailwind-css-starter-pack
+    cd MediNearby
+    ```
+
+3. Install the required packages:
+    ```sh
     npm install
     ```
 
-1. Start the development server.
+4. Start the development server:
     ```sh
     npm start
     ```
-1. Open the project in your browser at [`http://localhost:3000`](http://localhost:3000) to view your project.
-1. Create your React components and add your styles using Tailwind classes. You can also create new CSS files and import them into your components.
 
-The project is set up to use `postcss-cli` to process your CSS files. You can add your own `tailwind.config.js` file to customize your Tailwind setup.
+5. Open your browser at [http://localhost:3000](http://localhost:3000) to view the app.
+
+---
+
+## Usage
+
+- Use the **search bar** to find doctors by name, specialty, or clinic.
+- Select a **specialty** from the dropdown to filter results.
+- Click **My Location** to show your current location on the map.
+- Click on a **doctor card** to focus on that doctor on the map.
+
+---
+
+## Technologies Used
+
+- **React 18** – for building the UI.
+- **Tailwind CSS 3.2** – for styling components.
+- **React Leaflet** or **Map library** – to display maps.
+- **Lucide icons** – for UI icons.
+- **Browser Geolocation API** – to get the user’s location.
+
+---
 
 ## Contributing
 
-Contributions are welcome! If you have any suggestions or find any issues, please feel free to open an issue or a pull request.
+Contributions are welcome! You can:
+
+- Open an **issue** if you find bugs or have suggestions.
+- Submit a **pull request** to add features or fix issues.
+
+---
+
+## License
+
+This project is licensed under the MIT License.
