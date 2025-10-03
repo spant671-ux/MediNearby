@@ -28,6 +28,15 @@ export default function DoctorCard({ doctor, onLocate, isSelected }) {
           <MapPin className="w-4 h-4 mr-2 text-red-500" />
           <span className="text-sm">{doctor.address}</span>
         </div>
+
+        {/* ✅ Distance display */}
+        {doctor.distance && (
+          <div className="flex items-center text-gray-500">
+            <MapPin className="w-4 h-4 mr-2 text-gray-400" />
+            <span className="text-sm">{doctor.distance} km away</span>
+          </div>
+        )}
+
         <div className="flex items-center text-gray-600">
           <Phone className="w-4 h-4 mr-2 text-green-500" />
           <span className="text-sm">{doctor.phone}</span>
