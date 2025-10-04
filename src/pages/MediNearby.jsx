@@ -129,7 +129,7 @@ export default function MediNearby() {
           distance:
             d.lat && d.lng ? getDistanceFromLatLonInKm(lat, lng, d.lat, d.lng) : Infinity,
         }))
-        .filter((d) => d.distance <= 50)
+        .filter((d) => d.distance <= 20)
         .sort((a, b) => a.distance - b.distance);
     }
     return filtered;
