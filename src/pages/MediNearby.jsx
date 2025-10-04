@@ -49,7 +49,7 @@ export default function MediNearby() {
 
   // 📡 Fetch doctors + medical stores from Firestore
   useEffect(() => {
-    const doctorsCol = collection(db, "doctors");
+    const doctorsCol = collection(db, "doctors"); 
     const storesCol = collection(db, "medicalStores");
 
     setLoading(true);
@@ -171,16 +171,17 @@ export default function MediNearby() {
   };
 
   // 🚪 Logout
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      showToast("Logged out successfully ✅", "success");
-      setTimeout(() => (window.location.href = "/login"), 1500);
-    } catch (err) {
-      console.error(err);
-      showToast("Logout failed ❌", "error");
-    }
-  };
+const handleLogout = async () => {
+  try {
+    await signOut(auth); // wait for logout to actually complete
+    showToast("Logged out successfully ✅", "success");
+    // redirect to login **only after successful logout**
+    window.location.href = "/login";
+  } catch (err) {
+    console.error(err);
+    showToast("Logout failed ❌", "error");
+  }
+};
 
   // 👋 Welcome user
   useEffect(() => {
