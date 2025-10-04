@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import DoctorCard from "../components/DoctorCard";
 import MapComponent from "../components/MapComponent";
-import { Search, Navigation, Hospital, LogOut, Loader2 } from "lucide-react";
+import { Search } from "lucide-react";
 import { collection, onSnapshot } from "firebase/firestore";
 import { db, auth } from "../firebase/firebase";
 import { signOut } from "firebase/auth";
+import Header from "../components/Header";
 
 const specialties = [
   "All Specialties",
@@ -17,7 +18,7 @@ const specialties = [
   "Medical Store",
 ];
 
-// 🧭 Utility: Haversine distance in KM
+// Haversine distance
 const getDistanceFromLatLonInKm = (lat1, lon1, lat2, lon2) => {
   const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -47,18 +48,15 @@ export default function MediNearby() {
   const mapRef = useRef(null);
   const mapSectionRef = useRef(null);
 
-  // 📡 Fetch doctors + medical stores from Firestore
+  // Fetch doctors + medical stores
   useEffect(() => {
-    const doctorsCol = collection(db, "doctors"); 
+    const doctorsCol = collection(db, "doctors");
     const storesCol = collection(db, "medicalStores");
 
     setLoading(true);
 
     const unsubDoctors = onSnapshot(doctorsCol, (snapshot) => {
-      const list = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+      const list = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
       setData((prev) => {
         const oldStores = prev.filter((p) => p.specialty === "Medical Stores");
         return [...list, ...oldStores];
@@ -69,7 +67,7 @@ export default function MediNearby() {
       const list = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
-        specialty: "Medical Stores", // ensure consistent type
+        specialty: "Medical Stores",
       }));
       setData((prev) => {
         const oldDocs = prev.filter((p) => p.specialty !== "Medical Stores");
@@ -84,7 +82,7 @@ export default function MediNearby() {
     };
   }, []);
 
-  // 📍 Get user location
+  // Get user location
   useEffect(() => {
     if (!userLocation) getUserLocation();
   }, []);
@@ -98,7 +96,7 @@ export default function MediNearby() {
           setLocating(false);
         },
         () => {
-          setUserLocation([27.1767, 78.0081]); // fallback to Agra
+          setUserLocation([27.1767, 78.0081]); // fallback
           setLocating(false);
         }
       );
@@ -108,16 +106,12 @@ export default function MediNearby() {
     }
   };
 
-  // 🔍 Filter data
+  // Filter data
   const filterData = useCallback(() => {
     let filtered = data;
-
-    // Filter by specialty
     if (selectedSpecialty !== "All Specialties") {
       filtered = filtered.filter((d) => d.specialty === selectedSpecialty);
     }
-
-    // Search query
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       filtered = filtered.filter(
@@ -127,31 +121,25 @@ export default function MediNearby() {
           d.clinic?.toLowerCase().includes(q)
       );
     }
-
-    // Distance sort
     if (userLocation) {
       const [lat, lng] = userLocation;
       filtered = filtered
         .map((d) => ({
           ...d,
           distance:
-            d.lat && d.lng
-              ? getDistanceFromLatLonInKm(lat, lng, d.lat, d.lng)
-              : Infinity,
+            d.lat && d.lng ? getDistanceFromLatLonInKm(lat, lng, d.lat, d.lng) : Infinity,
         }))
         .filter((d) => d.distance <= 50)
         .sort((a, b) => a.distance - b.distance);
     }
-
     return filtered;
   }, [data, searchQuery, selectedSpecialty, userLocation]);
 
-  // ♻️ Update when inputs change
   useEffect(() => {
     setFilteredData(filterData());
   }, [filterData]);
 
-  // 🧭 Locate on map
+  // Locate on map
   const handleLocate = () => {
     getUserLocation();
     if (mapSectionRef.current) {
@@ -162,7 +150,7 @@ export default function MediNearby() {
     }
   };
 
-  // 🍞 Toast
+  // Toast
   const showToast = (message, type = "success") => {
     setToast({ message, type });
     setToastVisible(true);
@@ -170,20 +158,19 @@ export default function MediNearby() {
     setTimeout(() => setToast(null), 3500);
   };
 
-  // 🚪 Logout
-const handleLogout = async () => {
-  try {
-    await signOut(auth); // wait for logout to actually complete
-    showToast("Logged out successfully ✅", "success");
-    // redirect to login **only after successful logout**
-    window.location.href = "/login";
-  } catch (err) {
-    console.error(err);
-    showToast("Logout failed ❌", "error");
-  }
-};
+  // Logout
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      showToast("Logged out successfully ✅", "success");
+      window.location.href = "/login";
+    } catch (err) {
+      console.error(err);
+      showToast("Logout failed ❌", "error");
+    }
+  };
 
-  // 👋 Welcome user
+  // Auth listener
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((currentUser) => {
       if (currentUser && !user) {
@@ -199,73 +186,41 @@ const handleLogout = async () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 relative">
       {/* Header */}
-      <div className="bg-white shadow-md sticky top-0 z-50 backdrop-blur-md bg-opacity-80">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-2 rounded-lg shadow-md">
-              <Hospital className="w-6 h-6 text-white" />
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900">MediNearby</h1>
-          </div>
+      <Header locating={locating} onLocate={handleLocate} onLogout={handleLogout} />
 
-          <div className="flex gap-3">
+      {/* Search + Filter */}
+      <div className="container mx-auto px-4 py-3 flex gap-3 sticky top-20 backdrop-blur-md bg-white/70 z-40 rounded-md shadow-md">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <input
+            type="text"
+            placeholder="Search doctors or stores..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-10 py-3 border-2 border-gray-200 rounded-lg outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-300 transition"
+          />
+          {searchQuery && (
             <button
-              onClick={handleLocate}
-              disabled={locating}
-              className="flex items-center space-x-2 bg-gradient-to-r from-blue-500 to-blue-700 hover:scale-105 transition-transform text-white px-4 py-2 rounded-lg disabled:opacity-50 shadow-lg"
+              onClick={() => setSearchQuery("")}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white hover:bg-red-600 rounded-full w-6 h-6 flex items-center justify-center transition-colors duration-200"
+              aria-label="Clear search"
             >
-              {locating ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Navigation className="w-4 h-4" />
-              )}
-              <span>{locating ? "Locating..." : "My Location"}</span>
+              ×
             </button>
-
-            <button
-              onClick={handleLogout}
-              className="flex items-center space-x-2 bg-gradient-to-r from-red-500 to-red-700 hover:scale-105 transition-transform text-white px-4 py-2 rounded-lg shadow-lg"
-            >
-              <LogOut className="w-4 h-4" />
-              <span>Logout</span>
-            </button>
-          </div>
+          )}
         </div>
 
-        {/* Search + Filter */}
-        <div className="container mx-auto px-4 py-3 flex gap-3 sticky top-20 backdrop-blur-md bg-white/70 z-40 rounded-md shadow-md">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <input
-              type="text"
-              placeholder="Search doctors or stores..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-10 py-3 border-2 border-gray-200 rounded-lg outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-300 transition"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery("")}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white hover:bg-red-600 rounded-full w-6 h-6 flex items-center justify-center transition-colors duration-200"
-                aria-label="Clear search"
-              >
-                ×
-              </button>
-            )}
-          </div>
-
-          <select
-            value={selectedSpecialty}
-            onChange={(e) => setSelectedSpecialty(e.target.value)}
-            className="px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-300 transition"
-          >
-            {specialties.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-        </div>
+        <select
+          value={selectedSpecialty}
+          onChange={(e) => setSelectedSpecialty(e.target.value)}
+          className="px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-300 transition"
+        >
+          {specialties.map((s) => (
+            <option key={s} value={s}>
+              {s}
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* Toast */}
