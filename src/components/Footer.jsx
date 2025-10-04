@@ -2,8 +2,8 @@ import { Hospital, Navigation, Phone } from 'lucide-react';
 
 function Footer() {
   return (
-    <footer className="bg-gradient-to-r from-blue-600 to-blue-700 text-white py-7 shadow-inner">
-      <div className="container mx-auto px-4 flex flex-col md:flex-row justify-between items-center">
+    <footer className="bg-gradient-to-r from-blue-600 to-blue-700 text-white  md:py-2 shadow-inner">
+      <div className="container mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center">
         
         {/* Left section */}
         <div className="flex items-center space-x-3 mb-6 md:mb-0">
