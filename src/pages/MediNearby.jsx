@@ -15,7 +15,7 @@ const specialties = [
   "General Physician",
   "Orthopedic",
   "Neurologist",
-  "Medical Store",
+  "Pharmacies",
 ];
 
 // Haversine distance
@@ -127,7 +127,9 @@ export default function MediNearby() {
         .map((d) => ({
           ...d,
           distance:
-            d.lat && d.lng ? getDistanceFromLatLonInKm(lat, lng, d.lat, d.lng) : Infinity,
+            d.lat && d.lng
+              ? getDistanceFromLatLonInKm(lat, lng, d.lat, d.lng)
+              : Infinity,
         }))
         .filter((d) => d.distance <= 20)
         .sort((a, b) => a.distance - b.distance);
@@ -186,7 +188,11 @@ export default function MediNearby() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 relative">
       {/* Header */}
-      <Header locating={locating} onLocate={handleLocate} onLogout={handleLogout} />
+      <Header
+        locating={locating}
+        onLocate={handleLocate}
+        onLogout={handleLogout}
+      />
 
       {/* Search + Filter */}
       <div className="container mx-auto px-4 py-3 flex gap-3 sticky top-20 backdrop-blur-md bg-white/70 z-40 rounded-md shadow-md">
@@ -239,7 +245,9 @@ export default function MediNearby() {
         {/* Left: List */}
         <div className="lg:col-span-1 space-y-4 max-h-[800px] overflow-y-auto">
           {loading ? (
-            <p className="text-gray-500 text-center mt-4">Loading nearby places...</p>
+            <p className="text-gray-500 text-center mt-4">
+              Loading nearby places...
+            </p>
           ) : filteredData.length === 0 ? (
             <p className="text-gray-500 text-center mt-4">No results found.</p>
           ) : (
