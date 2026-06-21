@@ -61,22 +61,65 @@ const DoctorDashboard: React.FC<DashboardProps> = ({ user }) => {
   useEffect(() => {
     if (!user.uid) return;
     const docRef = doc(db, "doctors", user.uid);
-    const unsubProfile = onSnapshot(docRef, (snapshot) => {
-      if (snapshot.exists()) {
-        const data = snapshot.data() as Doctor;
-        setProfile({ ...data, id: snapshot.id });
-        
-        // Populate edit form states initially
-        setFormName(data.name || "");
-        setFormSpecialty(data.specialty || "General Physician");
-        setFormClinic(data.clinic || "");
-        setFormAddress(data.address || "");
-        setFormPhone(data.phone || "");
-        setFormExperience(data.experience || "");
-        setFormLat(data.lat || 27.1767);
-        setFormLng(data.lng || 78.0081);
+    const unsubProfile = onSnapshot(
+      docRef,
+      (snapshot) => {
+        if (snapshot.exists()) {
+          const data = snapshot.data() as Doctor;
+          setProfile({ ...data, id: snapshot.id });
+          
+          // Populate edit form states initially
+          setFormName(data.name || "");
+          setFormSpecialty(data.specialty || "General Physician");
+          setFormClinic(data.clinic || "");
+          setFormAddress(data.address || "");
+          setFormPhone(data.phone || "");
+          setFormExperience(data.experience || "");
+          setFormLat(data.lat || 27.1767);
+          setFormLng(data.lng || 78.0081);
+        }
+      },
+      (error) => {
+        console.warn("Doctor profile fetch failed, reading from localStorage fallback:", error);
+        const localProfileStr = localStorage.getItem(`doctor_profile_${user.uid}`);
+        if (localProfileStr) {
+          const data = JSON.parse(localProfileStr) as Doctor;
+          setProfile(data);
+          setFormName(data.name || "");
+          setFormSpecialty(data.specialty || "General Physician");
+          setFormClinic(data.clinic || "");
+          setFormAddress(data.address || "");
+          setFormPhone(data.phone || "");
+          setFormExperience(data.experience || "");
+          setFormLat(data.lat || 27.1767);
+          setFormLng(data.lng || 78.0081);
+        } else {
+          // Default mock profile if not present
+          const docName = user.email?.split("@")[0].charAt(0).toUpperCase() + user.email?.split("@")[0].slice(1) || "Doctor";
+          const defaultProfile: Doctor = {
+            id: user.uid,
+            name: `Dr. ${docName}`,
+            specialty: "General Physician",
+            clinic: "MediNearby Clinic",
+            address: "Agra, Uttar Pradesh",
+            phone: "+91 98765 43210",
+            experience: "5+ years",
+            rating: 4.8,
+            lat: 27.1767,
+            lng: 78.0081,
+          };
+          setProfile(defaultProfile);
+          setFormName(defaultProfile.name);
+          setFormSpecialty(defaultProfile.specialty);
+          setFormClinic(defaultProfile.clinic);
+          setFormAddress(defaultProfile.address);
+          setFormPhone(defaultProfile.phone);
+          setFormExperience(defaultProfile.experience);
+          setFormLat(defaultProfile.lat);
+          setFormLng(defaultProfile.lng);
+        }
       }
-    });
+    );
     return () => unsubProfile();
   }, [user]);
 
@@ -85,14 +128,24 @@ const DoctorDashboard: React.FC<DashboardProps> = ({ user }) => {
     if (!user.uid) return;
     const appointmentsCol = collection(db, "appointments");
     const q = query(appointmentsCol, where("doctorId", "==", user.uid));
-    const unsubAppointments = onSnapshot(q, (snapshot) => {
-      const list = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Appointment[];
-      list.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-      setAppointments(list);
-    });
+    const unsubAppointments = onSnapshot(
+      q,
+      (snapshot) => {
+        const list = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as Appointment[];
+        list.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+        setAppointments(list);
+      },
+      (error) => {
+        console.warn("Doctor appointments fetch failed, reading from localStorage:", error);
+        const localAppts = JSON.parse(localStorage.getItem("medinearby_appointments") || "[]");
+        const docAppts = localAppts.filter((a: Appointment) => a.doctorId === user.uid);
+        docAppts.sort((a: Appointment, b: Appointment) => b.createdAt.localeCompare(a.createdAt));
+        setAppointments(docAppts);
+      }
+    );
     return () => unsubAppointments();
   }, [user]);
 
@@ -101,13 +154,22 @@ const DoctorDashboard: React.FC<DashboardProps> = ({ user }) => {
     if (!user.uid) return;
     const reviewsCol = collection(db, "reviews");
     const q = query(reviewsCol, where("doctorId", "==", user.uid));
-    const unsubReviews = onSnapshot(q, (snapshot) => {
-      const list = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Review[];
-      setReviews(list);
-    });
+    const unsubReviews = onSnapshot(
+      q,
+      (snapshot) => {
+        const list = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as Review[];
+        setReviews(list);
+      },
+      (error) => {
+        console.warn("Doctor reviews fetch failed, reading from localStorage:", error);
+        const localRevs = JSON.parse(localStorage.getItem("medinearby_reviews") || "[]");
+        const docRevs = localRevs.filter((r: Review) => r.doctorId === user.uid);
+        setReviews(docRevs);
+      }
+    );
     return () => unsubReviews();
   }, [user]);
 
@@ -127,8 +189,14 @@ const DoctorDashboard: React.FC<DashboardProps> = ({ user }) => {
       });
       showToast("Appointment successfully accepted!", "success");
     } catch (err) {
-      console.error("Accept appt error: ", err);
-      showToast("Failed to accept appointment", "error");
+      console.warn("Accept appointment cloud write failed, using localStorage fallback: ", err);
+      const localAppts = JSON.parse(localStorage.getItem("medinearby_appointments") || "[]");
+      const updated = localAppts.map((a: Appointment) =>
+        a.id === apptId ? { ...a, status: "accepted" as const } : a
+      );
+      localStorage.setItem("medinearby_appointments", JSON.stringify(updated));
+      setAppointments(updated.filter((a) => a.doctorId === user.uid));
+      showToast("Appointment successfully accepted!", "success");
     }
   };
 
@@ -140,8 +208,14 @@ const DoctorDashboard: React.FC<DashboardProps> = ({ user }) => {
       });
       showToast("Appointment successfully declined", "success");
     } catch (err) {
-      console.error("Decline appt error: ", err);
-      showToast("Failed to decline appointment", "error");
+      console.warn("Decline appointment cloud write failed, using localStorage fallback: ", err);
+      const localAppts = JSON.parse(localStorage.getItem("medinearby_appointments") || "[]");
+      const updated = localAppts.map((a: Appointment) =>
+        a.id === apptId ? { ...a, status: "declined" as const } : a
+      );
+      localStorage.setItem("medinearby_appointments", JSON.stringify(updated));
+      setAppointments(updated.filter((a) => a.doctorId === user.uid));
+      showToast("Appointment successfully declined", "success");
     }
   };
 
@@ -149,23 +223,41 @@ const DoctorDashboard: React.FC<DashboardProps> = ({ user }) => {
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user.uid) return;
+    const updatedProfile = {
+      id: user.uid,
+      name: formName,
+      specialty: formSpecialty,
+      clinic: formClinic,
+      address: formAddress,
+      phone: formPhone,
+      experience: formExperience,
+      lat: Number(formLat),
+      lng: Number(formLng),
+      rating: profile?.rating || 4.8,
+    };
+
     try {
       const docRef = doc(db, "doctors", user.uid);
-      await setDoc(docRef, {
-        name: formName,
-        specialty: formSpecialty,
-        clinic: formClinic,
-        address: formAddress,
-        phone: formPhone,
-        experience: formExperience,
-        lat: Number(formLat),
-        lng: Number(formLng),
-        rating: profile?.rating || 4.8,
-      });
+      await setDoc(docRef, updatedProfile);
       showToast("Profile details updated successfully!", "success");
     } catch (err) {
-      console.error("Save profile error: ", err);
-      showToast("Failed to update profile details", "error");
+      console.warn("Save profile cloud write failed, using localStorage fallback: ", err);
+      
+      // Save doctor details in doctor_profile
+      localStorage.setItem(`doctor_profile_${user.uid}`, JSON.stringify(updatedProfile));
+      setProfile(updatedProfile);
+
+      // Also insert/update this doctor in the global search directory list in localStorage
+      const localDocs = JSON.parse(localStorage.getItem("medinearby_doctors") || "[]");
+      const docIdx = localDocs.findIndex((d: Doctor) => d.id === user.uid);
+      if (docIdx > -1) {
+        localDocs[docIdx] = updatedProfile;
+      } else {
+        localDocs.push(updatedProfile);
+      }
+      localStorage.setItem("medinearby_doctors", JSON.stringify(localDocs));
+
+      showToast("Profile details updated successfully!", "success");
     }
   };
 

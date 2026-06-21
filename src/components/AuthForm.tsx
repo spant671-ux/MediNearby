@@ -29,6 +29,9 @@ const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
     e.preventDefault();
     setLoading(true);
     setError("");
+    
+    // Save selected role in localStorage as fallback
+    localStorage.setItem("temp_auth_role", userRole);
 
     try {
       if (isLogin) {

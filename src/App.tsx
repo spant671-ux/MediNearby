@@ -5,7 +5,7 @@ import DoctorDashboard from "./pages/DoctorDashboard";
 import { auth, db } from "./firebase/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { Hospital, Loader2 } from "lucide-react";
-import type { AuthUser } from "./types";
+import type { AuthUser, UserRole } from "./types";
 
 const App: React.FC = () => {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -17,7 +17,16 @@ const App: React.FC = () => {
       setLoading(true);
       if (firebaseUser) {
         try {
-          const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
+          let userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
+          
+          // Retry check up to 5 times to handle signup race condition
+          let retries = 0;
+          while (!userDoc.exists() && retries < 5) {
+            await new Promise((resolve) => setTimeout(resolve, 300));
+            userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
+            retries++;
+          }
+
           if (userDoc.exists()) {
             const data = userDoc.data();
             setUser({
@@ -62,10 +71,16 @@ const App: React.FC = () => {
         } catch (err) {
           console.error("Error loading user role: ", err);
           // Fallback to local state if firebase fails
+          let role = localStorage.getItem(`user_role_${firebaseUser.uid}`) as UserRole;
+          if (!role) {
+            role = (localStorage.getItem("temp_auth_role") || 
+              (firebaseUser.email?.includes("doctor") ? "doctor" : "patient")) as UserRole;
+            localStorage.setItem(`user_role_${firebaseUser.uid}`, role);
+          }
           setUser({
             uid: firebaseUser.uid,
             email: firebaseUser.email,
-            role: "patient",
+            role: role,
           });
         }
       } else {

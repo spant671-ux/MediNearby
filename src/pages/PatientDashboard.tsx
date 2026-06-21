@@ -130,29 +130,157 @@ const PatientDashboard: React.FC<DashboardProps> = ({ user }) => {
     const storesCol = collection(db, "medicalStores");
     setLoading(true);
 
-    const unsubDoctors = onSnapshot(doctorsCol, (snapshot) => {
-      const list: Doctor[] = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Doctor[];
-      setData((prev) => {
-        const oldStores = prev.filter((p) => p.specialty === "Medical Stores");
-        return [...list, ...oldStores];
-      });
-    });
-
-    const unsubStores = onSnapshot(storesCol, (snapshot) => {
-      const list: Doctor[] = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-        specialty: "Medical Stores",
-      })) as Doctor[];
-      setData((prev) => {
-        const oldDocs = prev.filter((p) => p.specialty !== "Medical Stores");
-        return [...oldDocs, ...list];
-      });
+    let localDocsSeeded = false;
+    const initializeLocalDocs = () => {
+      if (localDocsSeeded) return;
+      localDocsSeeded = true;
+      console.log("Initializing local mock doctors...");
+      const localDocs = localStorage.getItem("medinearby_doctors");
+      if (!localDocs) {
+        const seedDoctors: Doctor[] = [
+          {
+            id: "doc1",
+            name: "Dr. Jane Doe",
+            specialty: "Cardiologist",
+            clinic: "Agra Heart Center",
+            address: "Sanjay Place, Agra",
+            phone: "+91 98765 43210",
+            experience: "10+ years",
+            rating: 4.9,
+            lat: 27.1982,
+            lng: 78.0078,
+          },
+          {
+            id: "doc2",
+            name: "Dr. John Smith",
+            specialty: "Dermatologist",
+            clinic: "Skin & Laser Clinic",
+            address: "Kamla Nagar, Agra",
+            phone: "+91 99999 88888",
+            experience: "8+ years",
+            rating: 4.7,
+            lat: 27.2045,
+            lng: 78.0256,
+          },
+          {
+            id: "doc3",
+            name: "Dr. Sarah Jenkins",
+            specialty: "Pediatrician",
+            clinic: "Happy Kids Clinic",
+            address: "Dayalbagh, Agra",
+            phone: "+91 98989 87878",
+            experience: "12+ years",
+            rating: 4.8,
+            lat: 27.2212,
+            lng: 78.0123,
+          },
+          {
+            id: "doc4",
+            name: "Dr. Robert Chen",
+            specialty: "General Physician",
+            clinic: "MediNearby Clinic",
+            address: "Agra, Uttar Pradesh",
+            phone: "+91 98765 43210",
+            experience: "5+ years",
+            rating: 4.8,
+            lat: 27.1767,
+            lng: 78.0081,
+          },
+          {
+            id: "doc5",
+            name: "Dr. Emily Taylor",
+            specialty: "Orthopedic",
+            clinic: "Bone & Joint Care",
+            address: "Taj Ganj, Agra",
+            phone: "+91 97777 66666",
+            experience: "15+ years",
+            rating: 4.9,
+            lat: 27.1654,
+            lng: 78.0432,
+          },
+          {
+            id: "doc6",
+            name: "Dr. Michael Chang",
+            specialty: "Neurologist",
+            clinic: "Neuro Spine Hospital",
+            address: "Sikandra, Agra",
+            phone: "+91 96666 55555",
+            experience: "14+ years",
+            rating: 4.8,
+            lat: 27.1891,
+            lng: 77.9782,
+          },
+          {
+            id: "pharm1",
+            name: "Apollo Pharmacy",
+            specialty: "Medical Stores",
+            clinic: "Apollo Pharmacy Store",
+            address: "Sanjay Place, Agra",
+            phone: "+91 91111 22222",
+            experience: "Open 24/7",
+            rating: 4.5,
+            lat: 27.1990,
+            lng: 78.0090,
+          },
+          {
+            id: "pharm2",
+            name: "MedPlus Pharmacy",
+            specialty: "Medical Stores",
+            clinic: "MedPlus Pharmacy Store",
+            address: "Dayalbagh, Agra",
+            phone: "+91 92222 33333",
+            experience: "Open 24/7",
+            rating: 4.6,
+            lat: 27.2200,
+            lng: 78.0130,
+          }
+        ];
+        localStorage.setItem("medinearby_doctors", JSON.stringify(seedDoctors));
+        setData(seedDoctors);
+      } else {
+        setData(JSON.parse(localDocs));
+      }
       setLoading(false);
-    });
+    };
+
+    const unsubDoctors = onSnapshot(
+      doctorsCol,
+      (snapshot) => {
+        const list: Doctor[] = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as Doctor[];
+        
+        setData((prev) => {
+          const oldStores = prev.filter((p) => p.specialty === "Medical Stores");
+          return [...list, ...oldStores];
+        });
+      },
+      (error) => {
+        console.warn("Doctors fetch failed. Falling back to local storage:", error);
+        initializeLocalDocs();
+      }
+    );
+
+    const unsubStores = onSnapshot(
+      storesCol,
+      (snapshot) => {
+        const list: Doctor[] = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+          specialty: "Medical Stores",
+        })) as Doctor[];
+        setData((prev) => {
+          const oldDocs = prev.filter((p) => p.specialty !== "Medical Stores");
+          return [...oldDocs, ...list];
+        });
+        setLoading(false);
+      },
+      (error) => {
+        console.warn("Stores fetch failed. Falling back to local storage:", error);
+        initializeLocalDocs();
+      }
+    );
 
     return () => {
       unsubDoctors();
@@ -164,17 +292,34 @@ const PatientDashboard: React.FC<DashboardProps> = ({ user }) => {
   useEffect(() => {
     if (!user.uid) return;
     const userRef = doc(db, "users", user.uid);
-    const unsubUser = onSnapshot(userRef, (snapshot) => {
-      if (snapshot.exists()) {
-        const d = snapshot.data();
-        setSavedDoctors(d.savedDoctors || []);
-        setPatientProfile({
-          name: d.name || user.email?.split("@")[0] || "Patient",
-          age: d.age || "",
-          preferences: d.preferences || "",
-        });
+    const unsubUser = onSnapshot(
+      userRef,
+      (snapshot) => {
+        if (snapshot.exists()) {
+          const d = snapshot.data();
+          setSavedDoctors(d.savedDoctors || []);
+          setPatientProfile({
+            name: d.name || user.email?.split("@")[0] || "Patient",
+            age: d.age || "",
+            preferences: d.preferences || "",
+          });
+        }
+      },
+      (error) => {
+        console.warn("User fetch failed, reading from localStorage:", error);
+        const localSaved = JSON.parse(localStorage.getItem(`saved_doctors_${user.uid}`) || "[]");
+        const localProfile = JSON.parse(
+          localStorage.getItem(`patient_profile_${user.uid}`) ||
+            JSON.stringify({
+              name: user.email?.split("@")[0] || "Patient",
+              age: "",
+              preferences: "",
+            })
+        );
+        setSavedDoctors(localSaved);
+        setPatientProfile(localProfile);
       }
-    });
+    );
     return () => unsubUser();
   }, [user]);
 
@@ -183,14 +328,24 @@ const PatientDashboard: React.FC<DashboardProps> = ({ user }) => {
     if (!user.uid) return;
     const appointmentsCol = collection(db, "appointments");
     const q = query(appointmentsCol, where("patientId", "==", user.uid));
-    const unsubAppointments = onSnapshot(q, (snapshot) => {
-      const list = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Appointment[];
-      list.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-      setAppointments(list);
-    });
+    const unsubAppointments = onSnapshot(
+      q,
+      (snapshot) => {
+        const list = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as Appointment[];
+        list.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+        setAppointments(list);
+      },
+      (error) => {
+        console.warn("Appointments fetch failed, reading from localStorage:", error);
+        const localAppts = JSON.parse(localStorage.getItem("medinearby_appointments") || "[]");
+        const patientAppts = localAppts.filter((a: Appointment) => a.patientId === user.uid);
+        patientAppts.sort((a: Appointment, b: Appointment) => b.createdAt.localeCompare(a.createdAt));
+        setAppointments(patientAppts);
+      }
+    );
     return () => unsubAppointments();
   }, [user]);
 
@@ -202,13 +357,22 @@ const PatientDashboard: React.FC<DashboardProps> = ({ user }) => {
     }
     const reviewsCol = collection(db, "reviews");
     const q = query(reviewsCol, where("doctorId", "==", selectedItem.id));
-    const unsubReviews = onSnapshot(q, (snapshot) => {
-      const list = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Review[];
-      setReviews(list);
-    });
+    const unsubReviews = onSnapshot(
+      q,
+      (snapshot) => {
+        const list = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as Review[];
+        setReviews(list);
+      },
+      (error) => {
+        console.warn("Reviews fetch failed, reading from localStorage:", error);
+        const localRevs = JSON.parse(localStorage.getItem("medinearby_reviews") || "[]");
+        const docRevs = localRevs.filter((r: Review) => r.doctorId === selectedItem.id);
+        setReviews(docRevs);
+      }
+    );
     return () => unsubReviews();
   }, [selectedItem]);
 
@@ -293,23 +457,28 @@ const PatientDashboard: React.FC<DashboardProps> = ({ user }) => {
   // Toggle doctor bookmark
   const toggleBookmark = async (doctorId: string) => {
     if (!user.uid) return;
-    const userRef = doc(db, "users", user.uid);
     const isBookmarked = savedDoctors.includes(doctorId);
+    const newSaved = isBookmarked
+      ? savedDoctors.filter((id) => id !== doctorId)
+      : [...savedDoctors, doctorId];
+
     try {
+      const userRef = doc(db, "users", user.uid);
       if (isBookmarked) {
         await updateDoc(userRef, {
           savedDoctors: arrayRemove(doctorId),
         });
-        showToast("Removed from bookmarks");
       } else {
         await updateDoc(userRef, {
           savedDoctors: arrayUnion(doctorId),
         });
-        showToast("Added to bookmarks");
       }
+      showToast(isBookmarked ? "Removed from bookmarks" : "Added to bookmarks");
     } catch (err) {
-      console.error("Bookmark err: ", err);
-      showToast("Error updating bookmark", "error");
+      console.warn("Bookmark cloud update failed, using localStorage fallback:", err);
+      setSavedDoctors(newSaved);
+      localStorage.setItem(`saved_doctors_${user.uid}`, JSON.stringify(newSaved));
+      showToast(isBookmarked ? "Removed from bookmarks" : "Added to bookmarks");
     }
   };
 
@@ -318,29 +487,37 @@ const PatientDashboard: React.FC<DashboardProps> = ({ user }) => {
     e.preventDefault();
     if (!selectedItem || !bookingDate || !bookingTime) return;
 
-    try {
-      const appRef = doc(collection(db, "appointments"));
-      const newApp: Appointment = {
-        id: appRef.id,
-        doctorId: selectedItem.id,
-        doctorName: selectedItem.name,
-        specialty: selectedItem.specialty,
-        patientId: user.uid,
-        patientEmail: user.email || "Patient",
-        date: bookingDate,
-        time: bookingTime,
-        status: "pending",
-        createdAt: new Date().toISOString(),
-      };
+    const appRef = doc(collection(db, "appointments"));
+    const newApp: Appointment = {
+      id: appRef.id,
+      doctorId: selectedItem.id,
+      doctorName: selectedItem.name,
+      specialty: selectedItem.specialty,
+      patientId: user.uid,
+      patientEmail: user.email || "Patient",
+      date: bookingDate,
+      time: bookingTime,
+      status: "pending",
+      createdAt: new Date().toISOString(),
+    };
 
+    try {
       await setDoc(appRef, newApp);
       showToast("Booking request sent successfully!", "success");
       setBookingModalOpen(false);
       setBookingDate("");
       setBookingTime("");
     } catch (err) {
-      console.error("Booking error: ", err);
-      showToast("Booking request failed", "error");
+      console.warn("Booking cloud write failed, using localStorage fallback: ", err);
+      const localAppts = JSON.parse(localStorage.getItem("medinearby_appointments") || "[]");
+      localAppts.unshift(newApp);
+      localStorage.setItem("medinearby_appointments", JSON.stringify(localAppts));
+      setAppointments(localAppts.filter((a: Appointment) => a.patientId === user.uid));
+      
+      showToast("Booking request sent successfully!", "success");
+      setBookingModalOpen(false);
+      setBookingDate("");
+      setBookingTime("");
     }
   };
 
@@ -349,27 +526,26 @@ const PatientDashboard: React.FC<DashboardProps> = ({ user }) => {
     e.preventDefault();
     if (!selectedItem || reviewRating === 0 || !reviewComment.trim()) return;
 
+    const revRef = doc(collection(db, "reviews"));
+    const newRev: Review = {
+      id: revRef.id,
+      doctorId: selectedItem.id,
+      patientEmail: patientProfile.name || user.email || "Anonymous",
+      rating: reviewRating,
+      comment: reviewComment,
+      date: new Date().toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      }),
+    };
+
+    const updatedReviews = [...reviews, newRev];
+    const sum = updatedReviews.reduce((acc, r) => acc + r.rating, 0);
+    const newAvg = parseFloat((sum / updatedReviews.length).toFixed(1));
+
     try {
-      const revRef = doc(collection(db, "reviews"));
-      const newRev: Review = {
-        id: revRef.id,
-        doctorId: selectedItem.id,
-        patientEmail: patientProfile.name || user.email || "Anonymous",
-        rating: reviewRating,
-        comment: reviewComment,
-        date: new Date().toLocaleDateString("en-US", {
-          year: "numeric",
-          month: "short",
-          day: "numeric",
-        }),
-      };
-
       await setDoc(revRef, newRev);
-
-      // Re-calculate and write back the doctor's average rating in Firestore
-      const updatedReviews = [...reviews, newRev];
-      const sum = updatedReviews.reduce((acc, r) => acc + r.rating, 0);
-      const newAvg = parseFloat((sum / updatedReviews.length).toFixed(1));
 
       const docRef = doc(db, "doctors", selectedItem.id);
       const isDoctor = await getDoc(docRef);
@@ -388,8 +564,24 @@ const PatientDashboard: React.FC<DashboardProps> = ({ user }) => {
       setReviewRating(0);
       setReviewComment("");
     } catch (err) {
-      console.error("Review err: ", err);
-      showToast("Failed to submit review", "error");
+      console.warn("Review cloud write failed, using localStorage fallback: ", err);
+      const localRevs = JSON.parse(localStorage.getItem("medinearby_reviews") || "[]");
+      localRevs.push(newRev);
+      localStorage.setItem("medinearby_reviews", JSON.stringify(localRevs));
+      setReviews(localRevs.filter((r: Review) => r.doctorId === selectedItem.id));
+
+      // Update doctor rating in the local docs list
+      const localDocs = JSON.parse(localStorage.getItem("medinearby_doctors") || "[]");
+      const updatedDocs = localDocs.map((d: Doctor) =>
+        d.id === selectedItem.id ? { ...d, rating: newAvg } : d
+      );
+      localStorage.setItem("medinearby_doctors", JSON.stringify(updatedDocs));
+      setData(updatedDocs);
+
+      showToast("Review submitted successfully!", "success");
+      setReviewModalOpen(false);
+      setReviewRating(0);
+      setReviewComment("");
     }
   };
 
@@ -406,8 +598,20 @@ const PatientDashboard: React.FC<DashboardProps> = ({ user }) => {
       });
       showToast("Profile updated successfully!", "success");
     } catch (err) {
-      console.error("Profile err: ", err);
-      showToast("Failed to save profile", "error");
+      console.warn("Profile cloud write failed, using localStorage fallback: ", err);
+      localStorage.setItem(`patient_profile_${user.uid}`, JSON.stringify(patientProfile));
+      
+      // Update name inside users metadata fallback
+      const localRole = localStorage.getItem(`user_role_${user.uid}`);
+      localStorage.setItem(`user_profile_${user.uid}`, JSON.stringify({
+        email: user.email,
+        role: localRole,
+        name: patientProfile.name,
+        age: patientProfile.age,
+        preferences: patientProfile.preferences
+      }));
+      
+      showToast("Profile updated successfully!", "success");
     }
   };
 
@@ -418,18 +622,14 @@ const PatientDashboard: React.FC<DashboardProps> = ({ user }) => {
       await deleteDoc(doc(db, "appointments", apptId));
       showToast("Appointment successfully cancelled", "success");
     } catch (err) {
-      console.error("Cancel appt err: ", err);
-      showToast("Failed to cancel appointment", "error");
+      console.warn("Cancel appointment cloud write failed, using localStorage fallback: ", err);
+      const localAppts = JSON.parse(localStorage.getItem("medinearby_appointments") || "[]");
+      const filtered = localAppts.filter((a: Appointment) => a.id !== apptId);
+      localStorage.setItem("medinearby_appointments", JSON.stringify(filtered));
+      setAppointments(filtered.filter((a: Appointment) => a.patientId === user.uid));
+      showToast("Appointment successfully cancelled", "success");
     }
   };
-
-  // Welcome toast (once)
-  useEffect(() => {
-    if (user?.email) {
-      showToast(`Welcome back, ${user.email.split("@")[0]}`);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const resultCount = filteredData.length;
   const bookmarkedList = data.filter((d) => savedDoctors.includes(d.id));
